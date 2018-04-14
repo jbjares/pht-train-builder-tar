@@ -8,9 +8,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 import atexit
-import tempfile
-import zipfile
-import shutil
+import tarfile
 import docker
 
 
@@ -20,6 +18,10 @@ db = SQLAlchemy(app)
 
 UPLOAD_FOLDER = '/tmp/archive_files'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+
+# Init Docker client
+docker_client = docker.from_env()
 
 
 # Start the AP Scheduler
@@ -44,15 +46,6 @@ class TrainArchiveJob(db.Model):
 
     # State of this archive job
     state = db.Column(db.Enum(JobState))
-
-    # Algorithm (Entrypoint) of the train, stored as LargeBinary)
-    algorithm_content = db.Column(db.LargeBinary)
-
-    # Metadata of the train, stored as LargeBinary
-    metadata_content = db.Column(db.LargeBinary)
-
-    # Query of the train, stored as LargeBinary
-    query_content = db.Column(db.LargeBinary)
 
     def serialize(self):
         return {
@@ -147,128 +140,37 @@ def upload_file(uuid):
     filepath = os.path.join(UPLOAD_FOLDER, job.trainID)
     file.save(filepath)
     job.filepath = filepath
-    update_job_state(job, JobState.FILE_UPLOAD_COMPLETED)
+    update_job_state(job, JobState.TAR_UPLOADED)
     return response({'success': 'true'}, status_code=200)
 
 
 # Define the background jobs
 
-def work_on_job(from_state, via_state, to_state, worker_function):
+def create_train():
 
     # Find all jobs with the from state
-    job = db.session.query(TrainArchiveJob).filter_by(state=from_state).first()
+    job = db.session.query(TrainArchiveJob).filter_by(state=JobState.TAR_UPLOADED).first()
     if job is not None:
-        update_job_state(job, via_state)
+        update_job_state(job, JobState.TRAIN_BEING_CREATED)
+        dockerfile = os.path.abspath(os.path.join(app.instance_path, 'Dockerfile'))
+        with tarfile.open(job.filepath, 'a') as tar:
+            tar.add(dockerfile, arcname='Dockerfile')
 
-        # Use the worker to work on the job
-        result = worker_function(job)
-
-        # Update job state again to state or to to error
-        if result != 0:
-            update_job_state(job, JobState.ERROR)
-        else:
-            update_job_state(job, to_state)
-
-
-def load(job: TrainArchiveJob):
-
-    # Create a temporary directory to load the files into
-    tmp_dir = tempfile.mkdtemp()
-    with zipfile.ZipFile(job.filepath, 'r') as zip_ref:
-        zip_ref.extractall(tmp_dir)
-
-    # Filenames
-    metadata = "metadata.rdf"
-    query = "query.sparql"
-    algorithm = "algorithm.py"
-
-    # Traverse the directory recursively
-    container_files = dict()
-    for dirpath, _, filenames in os.walk(tmp_dir):
-        for f in filenames:
-            abs_path = os.path.abspath(os.path.join(dirpath, f))
-            if f == metadata:
-                container_files[metadata] = abs_path
-            elif f == query:
-                container_files[query] = abs_path
-            else:
-                container_files[algorithm] = abs_path
-            if len(container_files) > 2:
-                break
-        if len(container_files) > 2:
-            break
-    if len(container_files) > 3 \
-            or metadata not in container_files \
-            or query not in container_files \
-            or algorithm not in container_files:
-        return 1
-
-    with open(container_files[metadata], 'rb') as f:
-        job.metadata_content = f.read()
-    with open(container_files[query], 'rb') as f:
-        job.query_content = f.read()
-    with open(container_files[algorithm], 'rb') as f:
-        job.algorithm_content = f.read()
-    shutil.rmtree(tmp_dir)
-    return 0
+        # Build Docker container from tar file
+        with open(job.filepath, 'r') as f:
+            docker_client.images.build(
+                fileobj=f,
+                custom_context=True,
+                tag='{}:init'.format(job.trainID))
+        update_job_state(job, JobState.TRAIN_SUBMITTED)
 
 
-def create_container(job: TrainArchiveJob):
-    tmp_dir = tempfile.mkdtemp()
-
-    # Filenames
-    metadata = "metadata.rdf"
-    query = "query.sparql"
-    algorithm = "algorithm"
-
-    with open(os.path.join(tmp_dir, metadata), 'wb') as f:
-        f.write(job.metadata_content)
-
-    with open(os.path.join(tmp_dir, query), 'wb') as f:
-        f.write(job.query_content)
-
-    with open(os.path.join(tmp_dir, algorithm), 'wb') as f:
-        f.write(job.algorithm_content)
-
-    dockerfile = os.path.join(tmp_dir, 'Dockerfile')
-    shutil.copyfile(
-        os.path.join(app.instance_path, 'Dockerfile'),
-        dockerfile
-    )
-    client = docker.from_env()
-    client.images.build(
-        path=os.path.dirname(dockerfile),
-        rm=True,
-        tag='{}:init'.format(job.trainID))
-
-    return 0
-
-
-# Register Job for loading the images
 scheduler.add_job(
-    func=lambda: work_on_job(
-            JobState.FILE_UPLOAD_COMPLETED,
-            JobState.CONTAINER_FILES_BEING_EXTRACTED,
-            JobState.CONTAINER_FILES_CREATED,
-            load),
-    trigger=IntervalTrigger(seconds=2),
+    func=create_train,
+    trigger=IntervalTrigger(seconds=3),
     id='load',
     name='Loads the content from the submitted archive file',
     replace_existing=True)
-
-
-# Register Job for loading the images
-scheduler.add_job(
-    func=lambda: work_on_job(
-            JobState.CONTAINER_FILES_CREATED,
-            JobState.DOCKER_IMAGE_BEING_CREATED,
-            JobState.DOCKER_IMAGE_PUSHED,
-            create_container),
-    trigger=IntervalTrigger(seconds=2),
-    id='create_image',
-    name='Create Docker Image',
-    replace_existing=True)
-
 
 if __name__ == '__main__':
     app.run()
