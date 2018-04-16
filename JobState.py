@@ -1,8 +1,0 @@
-import enum
-
-
-class JobState(enum.Enum):
-    CREATED = "CREATED"
-    TAR_UPLOADED = "FILE_UPLOADED"
-    TRAIN_BEING_CREATED = "TRAIN_BEING_CREATED"
-    TRAIN_SUBMITTED = "TRAIN_SUBMITTED"

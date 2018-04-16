@@ -1,6 +1,5 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from JobState import JobState
 from flask import request
 from flask import jsonify
 import os
@@ -10,25 +9,33 @@ from apscheduler.triggers.interval import IntervalTrigger
 import atexit
 import tarfile
 import docker
+import enum
+
+
+class JobState(enum.Enum):
+    """
+    Represents the states a TrainBuilderArchive job traverses.
+    """
+    CREATED = "CREATED"
+    TAR_UPLOADED = "FILE_UPLOADED"
+    TRAIN_BEING_CREATED = "TRAIN_BEING_CREATED"
+    TRAIN_SUBMITTED = "TRAIN_SUBMITTED"
 
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////data/jobs.db'
 db = SQLAlchemy(app)
 
-UPLOAD_FOLDER = '/tmp/archive_files'
+UPLOAD_FOLDER = '/data/archive_files'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-
 # Init Docker client
-docker_client = docker.from_env()
+docker_client = docker.DockerClient(base_url='unix://var/run/docker.sock')
 
 
-# Start the AP Scheduler
-scheduler = BackgroundScheduler()
-scheduler.start()
-atexit.register(lambda: scheduler.shutdown())
-
+@app.before_first_request
+def setup_database():
+    db.create_all()
 
 class TrainArchiveJob(db.Model):
 
@@ -73,14 +80,6 @@ def update_job_state(job, state):
     db.session.merge(job)
     db.session.flush()
     db.session.commit()
-
-
-# Ensure that the database table exists before making the first request
-@app.before_first_request
-def create_db():
-    db.drop_all()
-    db.create_all()
-
 
 def validate_train_submission_record(json):
     return 'trainID' in json and 'registry' in json
@@ -145,9 +144,9 @@ def upload_file(uuid):
 
 
 # Define the background jobs
-
 def create_train():
-
+    
+    setup_database()
     # Find all jobs with the from state
     job = db.session.query(TrainArchiveJob).filter_by(state=JobState.TAR_UPLOADED).first()
     if job is not None:
@@ -158,12 +157,18 @@ def create_train():
 
         # Build Docker container from tar file
         with open(job.filepath, 'r') as f:
+            repository = '{}/{}:init'.format(job.registry_uri, job.trainID)
             docker_client.images.build(
                 fileobj=f,
                 custom_context=True,
-                tag='{}:init'.format(job.trainID))
+                tag=repository)
+            docker_client.images.push(repository)
         update_job_state(job, JobState.TRAIN_SUBMITTED)
 
+# Start the AP Scheduler
+scheduler = BackgroundScheduler()
+scheduler.start()
+atexit.register(lambda: scheduler.shutdown())
 
 scheduler.add_job(
     func=create_train,
@@ -173,4 +178,6 @@ scheduler.add_job(
     replace_existing=True)
 
 if __name__ == '__main__':
-    app.run()
+    app.run(port=6007, host='0.0.0.0')
+
+
