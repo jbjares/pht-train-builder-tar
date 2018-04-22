@@ -91,24 +91,6 @@ def response(body, status_code):
     return resp
 
 
-# Create a new job for being processed
-@app.route('/job', methods=['POST'])
-def create_job():
-    json_body = request.get_json(force=True)
-
-    if not validate_train_submission_record(json_body):
-        return response({'success': 'false'}, status_code=400)
-
-    # Add the new job to the database
-    job = TrainArchiveJob.from_kws(json_body)
-
-    # TODO Fail if the database already contains such a job
-
-    db.session.add(job)
-    db.session.commit()
-    return response({'success': 'true', 'upload_id': job.trainID}, status_code=200)
-
-
 @app.route('/job', methods=['GET'])
 def get_job():
     resp = jsonify([x.serialize() for x in TrainArchiveJob.query.all()])
@@ -117,29 +99,13 @@ def get_job():
 
 
 # Upload file for a particular job
-@app.route('/job/<uuid>', methods=['POST'])
-def upload_file(uuid):
+@app.route('/upload', methods=['POST'])
+def upload():
 
-    # Check if the object with the trainID
-    job = db.session.query(TrainArchiveJob).filter_by(trainID=uuid).scalar()
+    trainname = request.form['trainname']
+    trainfile = request.form['trainfile']
 
-    # Return 404 if the job with the URL cannot be found
-    if job is None:
-        return response({'success': 'true'}, status_code=404)
 
-    if 'file' not in request.files:
-        return response({'success': 'true'}, 400)
-    file = request.files['file']
-
-    # Create the upload directory if it does not already exist
-    if not os.path.exists(UPLOAD_FOLDER):
-        os.mkdir(UPLOAD_FOLDER)
-
-    # Save the file to the upload directory
-    filepath = os.path.join(UPLOAD_FOLDER, job.trainID)
-    file.save(filepath)
-    job.filepath = filepath
-    update_job_state(job, JobState.TAR_UPLOADED)
     return response({'success': 'true'}, status_code=200)
 
 
@@ -157,7 +123,7 @@ def create_train():
 
         # Build Docker container from tar file
         with open(job.filepath, 'r') as f:
-            repository = '{}/{}:init'.format(job.registry_uri, job.trainID)
+            repository = '{}/{}:START'.format(job.registry_uri, job.trainID)
             docker_client.images.build(
                 fileobj=f,
                 custom_context=True,
