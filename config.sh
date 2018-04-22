@@ -2,7 +2,10 @@
 export EUREKA_SERVICE_URL=http://localhost:8761/eureka
 export EUREKA_INSTANCE_HOSTNAME=train-builder-tar
 export EUREKA_INSTANCE_PORT=6007
-export URI_STATION_SERVICE=http://localhost:6006/station
+export URI_STATION_OFFICE=http://localhost:6006/station
+export URI_TRAIN_OFFICE=http://localhost:6001/train
+export URI_TRAIN_ROUTER=http://localhost:6004/train
+
 
 # Configuration Items are
 #SERVICE_NAME = Service name is used as the application ID towards Eureka

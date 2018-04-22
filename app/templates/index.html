@@ -1,56 +1,6 @@
-<!DOCTYPE html>
-
-<head>
- <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1">
- <link href="https://cdnjs.cloudflare.com/ajax/libs/foundation/6.4.3/css/foundation-float.min.css"
- rel="stylesheet" />
- <link rel="stylesheet" href="http:///cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css">
- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.16/css/dataTables.foundation.min.css">
-
- <script type="text/javascript" src="https://code.jquery.com/jquery-1.12.4.js"></script>
- <script type="text/javascript" src="http://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
-
- <!-- Cytoscape + dagre -->
- <script src="https://cdn.rawgit.com/cpettitt/dagre/v0.7.4/dist/dagre.min.js"></script>
- <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.2.11/cytoscape.js"></script>
- <script src="https://cdn.rawgit.com/cytoscape/cytoscape.js-dagre/1.5.0/cytoscape-dagre.js"></script>
-
-<link href="{{ url_for('static',filename='css/custom.css') }}" rel="stylesheet" />
-
-</head>
-<body>
-
- <h1>Personal Health Train Route Planer</h1>
- <div class="row expanded">
-   <div class="columns large-12">
-     <table id="station-table" class="display" style="width:100%">
-       <thead>
-         <tr>
-           <th>Name</th>
-           <th>URI</th>
-           <th>ID</th>
-         </tr>
-       </thead>
-     </table>
-   </div>
- </div>
- <div class="row expanded">
-   <div class="columns large-2 border">
-
-    <h2> Train Submission </h2>
-    <form>
-        <input type="text" name="trainname" placeholder="Train Name">
-        <input type="file" name="trainfile">
-        <button id="submitTrain" type="button" class="button">Submit Train</button>
-    </form>
-
-   </div>
-   <div class="columns large-10">
-       <div id="cy"></div>
-   </div>
- </div>
-
-  <script src="{{ url_for('static',filename='js/cytoscape-cxtmenu.js') }}"></script>
-  <script src="{{ url_for('static',filename='js/cytoscape-edgehandles.js') }}"></script>
-  <script src="{{ url_for('static',filename='js/index.js') }}"></script>
-</body>
+{% extends "layout.html" %}
+{% block content %}
+  <h1>Index</h1>
+  <p class="important">
+    Welcome on my awesome homepage.
+{% endblock %}

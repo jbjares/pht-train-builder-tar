@@ -1,8 +1,6 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from flask import request
-from flask import render_template
-from flask import jsonify
+from flask import request, render_template, jsonify, flash, redirect, url_for
 from sqlalchemy.orm.attributes import flag_modified
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
@@ -11,18 +9,24 @@ import tarfile
 import docker
 import enum
 import os
+from werkzeug.utils import secure_filename
+import tempfile
+import sys
+import requests
 
 
 # CONSTANTS
 GET = 'GET'
-
+POST = 'POST'
+TRAINFILE_NAME = 'trainfile'
+TRAINNAME_NAME = 'trainname'
+TRAINROUTEJSON_NAME = 'trainroutejson'
 
 class JobState(enum.Enum):
     """
     Represents the states a TrainBuilderArchive job traverses.
     """
-    CREATED = "CREATED"
-    TAR_UPLOADED = "FILE_UPLOADED"
+    JOB_SUBMITTED = "JOB_SUBMITTED"
     TRAIN_BEING_CREATED = "TRAIN_BEING_CREATED"
     TRAIN_SUBMITTED = "TRAIN_SUBMITTED"
 
@@ -30,51 +34,50 @@ class JobState(enum.Enum):
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/jobs.db'
 db = SQLAlchemy(app)
-
-UPLOAD_FOLDER = '/data/archive_files'
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Init Docker client
 docker_client = docker.DockerClient(base_url='unix://var/run/docker.sock')
 
 
 # Get the Registry and the station-service urls from environ
-URI_STATION_SERVICE = os.environ['URI_STATION_SERVICE']
+URI_STATION_OFFICE = os.environ['URI_STATION_OFFICE']
+URI_TRAIN_OFFICE = os.environ['URI_TRAIN_OFFICE']
+URI_TRAIN_ROUTER = os.environ['URI_TRAIN_ROUTER']
+
+
+# Setup session
+app.secret_key = '37rwfyw89rfvbuyeiwjfwruf84ewuesbvguei'
+
+
+# Currently, we only allow the tar extension
+ALLOWED_EXTENSIONS = ['tar']
+
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 @app.before_first_request
 def setup_database():
     db.create_all()
 
+
+def request_train_id():
+    return requests.post(URI_TRAIN_OFFICE).json()['trainID']
+
+
 class TrainArchiveJob(db.Model):
 
     # Regular primary key
     id = db.Column(db.Integer, primary_key=True)
-
-    # Id of the train (from the TrainSubmissionRecord)
-    trainID = db.Column(db.String(80), unique=True, nullable=False)
-
-    # Docker Registry URI (from the TrainSubmissionRecord)
-    registry_uri = db.Column(db.String(80), unique=True, nullable=False)
 
     # Path to the zip File
     filepath = db.Column(db.String(80), unique=True, nullable=True)
 
     # State of this archive job
     state = db.Column(db.Enum(JobState))
-
-    def serialize(self):
-        return {
-            'id': self.id,
-            'trainID': self.trainID,
-            'registry_uri': self.registry_uri,
-            'filepath': self.filepath,
-            'state': str(self.state)
-        }
-
-    @classmethod
-    def from_kws(cls, kws):
-        return TrainArchiveJob(trainID=kws['trainID'], registry_uri=kws['registry'], state=JobState.CREATED)
 
 
 def update_job_state(job, state):
@@ -99,7 +102,35 @@ def response(body, status_code):
 
 @app.route("/", methods=[GET])
 def index():
-    return render_template('index.html', URI_STATION_SERVICE=URI_STATION_SERVICE)
+    return render_template('index.html',
+                           URI_STATION_SERVICE=URI_STATION_OFFICE,
+                           TRAINFILE_NAME=TRAINFILE_NAME,
+                           TRAINROUTEJSON_NAME=TRAINROUTEJSON_NAME,
+                           HEADER='Home Page')
+
+
+@app.route("/route", methods=[GET])
+def route():
+
+    # Get all trains for which routes can be planned (from TrainOffice)
+    trains = [x['trainID'] for x in requests.get(URI_TRAIN_OFFICE).json()]
+    return render_template('route.html',
+                           URI_STATION_SERVICE=URI_STATION_OFFICE,
+                           TRAINFILE_NAME=TRAINFILE_NAME,
+                           TRAINROUTEJSON_NAME=TRAINROUTEJSON_NAME,
+                           HEADER='Plan Route',
+                           trains=trains,
+                           URI_TRAIN_ROUTER=URI_TRAIN_ROUTER)
+
+
+@app.route("/train", methods=[GET])
+def train():
+
+    return render_template('train.html',
+                           URI_STATION_SERVICE=URI_STATION_OFFICE,
+                           TRAINFILE_NAME=TRAINFILE_NAME,
+                           TRAINROUTEJSON_NAME=TRAINROUTEJSON_NAME,
+                           HEADER='Submit Train')
 
 
 @app.route('/job', methods=[GET])
@@ -110,14 +141,39 @@ def get_job():
 
 
 # Upload file for a particular job
-@app.route('/upload', methods=['POST'])
-def upload():
+@app.route('/submit', methods=[POST])
+def submit():
 
-    trainname = request.form['trainname']
-    trainfile = request.form['trainfile']
+    # check if the post request has the file part
+    if TRAINFILE_NAME not in request.files:
+        flash('No file has been uploaded. Did you select the train.tar file?')
+        return redirect(url_for('train'))
 
+    file = request.files[TRAINFILE_NAME]
+    # if user does not select file, browser also
+    # submit a empty part without filename
+    if file.filename == '':
+        flash('No selected file')
+        return redirect(url_for('train'))
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        temp_dir = tempfile.mkdtemp()
 
-    return response({'success': 'true'}, status_code=200)
+        # The absolute where the file is going to be saved to
+        file_path = os.path.abspath(os.path.join(temp_dir, filename))
+        file.save(file_path)
+
+        # Fetch a new ID for the train
+        # TODO  Use the returned ID for pushing the image
+        trainID = request_train_id()
+
+        # Create a new trainArchiveJob
+        train_archive_job = TrainArchiveJob(filepath=file_path, state=JobState.JOB_SUBMITTED)
+        db.session.add(train_archive_job)
+        db.session.commit()
+
+        flash('New Train: {} was submitted successfully'.format(trainID))
+        return redirect(url_for('train'))
 
 
 # Define the background jobs
@@ -125,22 +181,26 @@ def create_train():
     
     setup_database()
     # Find all jobs with the from state
-    job = db.session.query(TrainArchiveJob).filter_by(state=JobState.TAR_UPLOADED).first()
+    job = db.session.query(TrainArchiveJob).filter_by(state=JobState.JOB_SUBMITTED).first()
     if job is not None:
         update_job_state(job, JobState.TRAIN_BEING_CREATED)
         dockerfile = os.path.abspath(os.path.join(app.instance_path, 'Dockerfile'))
+
+        # Add the Dockerfile to the archive
         with tarfile.open(job.filepath, 'a') as tar:
             tar.add(dockerfile, arcname='Dockerfile')
 
-        # Build Docker container from tar file
+            # Build Docker container from tar file
         with open(job.filepath, 'r') as f:
-            repository = '{}/{}:START'.format(job.registry_uri, job.trainID)
+            repository = '{}/{}:START'.format('test1', 'test2')
             docker_client.images.build(
                 fileobj=f,
                 custom_context=True,
                 tag=repository)
             docker_client.images.push(repository)
+
         update_job_state(job, JobState.TRAIN_SUBMITTED)
+
 
 # Start the AP Scheduler
 scheduler = BackgroundScheduler()

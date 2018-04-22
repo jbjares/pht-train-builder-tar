@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+
+<head>
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1, maximum-scale=1">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/foundation/6.4.3/css/foundation-float.min.css"
+          rel="stylesheet" />
+    <link rel="stylesheet" href="http:///cdn.datatables.net/1.10.16/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.16/css/dataTables.foundation.min.css">
+
+    <script type="text/javascript" src="https://code.jquery.com/jquery-1.12.4.js"></script>
+    <script type="text/javascript" src="http://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js"></script>
+
+    <!-- Cytoscape + dagre -->
+    <script src="https://cdn.rawgit.com/cpettitt/dagre/v0.7.4/dist/dagre.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.2.11/cytoscape.js"></script>
+    <script src="https://cdn.rawgit.com/cytoscape/cytoscape.js-dagre/1.5.0/cytoscape-dagre.js"></script>
+
+    <link href="{{ url_for('static',filename='css/custom.css') }}" rel="stylesheet" />
+
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="top-bar-left">
+    <ul class="dropdown menu" data-dropdown-menu>
+      <li><a href="/">Home</a></li>
+      <li><a href="/train">Submit Train</a></li>
+      <li><a href="/route">Plan Route</a></li>
+    </ul>
+  </div>
+    <div class="top-bar-right">
+        <h1>{{  HEADER }}</h1>
+    </div>
+</div>
+
+
+
+<div id="content">{% block content %}{% endblock %}</div>
+
+
+
+
+
+<script src="{{ url_for('static',filename='js/cytoscape-cxtmenu.js') }}"></script>
+<script src="{{ url_for('static',filename='js/cytoscape-edgehandles.js') }}"></script>
+<script src="{{ url_for('static',filename='js/index.js') }}"></script>
+</body>

@@ -1,24 +1,3 @@
-// ---------------------------------------------------------------
-// Initialize Station Table
-// ---------------------------------------------------------------
-const stationTable = $("#station-table").DataTable(
-  {
-    "bPaginate": false,
-    "bLengthChange": false,
-    "bFilter": false,
-    "bInfo": false,
-    "bAutoWidth": false,
-  "ajax": {
-      "url": "{{  URI_STATION_SERVICE }}",
-      "dataSrc": ""
-  },
-  "columns": [
-      { "data": "stationName" },
-      { "data": "stationURI" },
-      { "data": "stationID" }
-  ]
-  }
-);
 
 // ---------------------------------------------------------------
 // Initialize Cytoscape Canvas
@@ -55,22 +34,6 @@ const cy = window.cy = cytoscape({
       }
     }
   ]
-});
-
-// { data: { source: 'n1', target: 'n3' } }
-// ---------------------------------------------------------------
-// Click handler for station row
-// ---------------------------------------------------------------
-$('#station-table tbody').on('click', 'tr', function () {
-
-        const data = stationTable.row( this ).data();
-        const stationName = data['stationName'];
-        const stationID = data['stationID'];
-        cy.add([
-            { group: "nodes",
-              data: { id: stationID, label: stationName },
-              position: { x: 100, y: 100 }}
-        ]);
 });
 
 
@@ -168,25 +131,8 @@ const eh = cy.edgehandles({
   nodeLoopOffset: -50 // offset for edgeType: 'node' loops
 });
 
-function getRouteJSON() {
 
-  const route = cy.json()['elements'];
-  return {
-      nodes: route['nodes'].map(function(node){ return node['data']['id']}),
-      edges: route['edges'].map(function(edge) {
-          const data = edge['data'];
-          return {
-              source: data['source'],
-              target: data['target']
-          };
-      })
-  };
-}
+cy.on("add remove", function(evt) {
 
-// Train Submitter
-document.getElementById("submitTrain").addEventListener("click", function() {
-
-  // Collect the parameters needed to submit the train
-  
-
+    //$("#trainroutejson").val(JSON.stringify(getRouteJSON()));
 });

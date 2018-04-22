@@ -1,0 +1,93 @@
+{% extends "layout.html" %}
+{% block content %}
+
+
+
+
+<label for="trainselect">Plan Route for: </label>
+<select id="trainselect">
+    {% for train in trains %}
+    <option value="{{ train }}">{{ train }}</option>
+    {% endfor %}}
+</select>
+
+<div class="row expanded">
+    <div class="columns large-12">
+        <table id="station-table" class="display" style="width:100%">
+            <thead>
+            <tr>
+                <th>Name</th>
+                <th>URI</th>
+                <th>ID</th>
+            </tr>
+            </thead>
+        </table>
+    </div>
+</div>
+<div class="row expanded">
+    <div class="columns large-2">
+            <button id="submitRoute" class="button">Submit Route</button>
+    </div>
+    <div class="columns large-10">
+        <div id="cy"></div>
+    </div>
+</div>
+
+<script>
+    function getRouteJSON() {
+
+        // TODO Nodes and edges might be undefined
+        const route = cy.json()['elements'];
+        return {
+            nodes: route['nodes'].map(function(node){ return node['data']['id']}),
+            edges: route['edges'].map(function(edge) {
+                const data = edge['data'];
+                return {
+                    source: data['source'],
+                    target: data['target']
+                };
+            })
+        };
+    }
+    const stationTable = $("#station-table").DataTable({
+        "bPaginate": false,
+        "bLengthChange": false,
+        "bFilter": false,
+        "bInfo": false,
+        "bAutoWidth": false,
+        "ajax": {
+            "url": "{{  URI_STATION_SERVICE }}",
+            "dataSrc": ""
+        },
+        "columns": [
+            { "data": "stationName" },
+            { "data": "stationURI" },
+            { "data": "stationID" }
+        ]
+    });
+    $('#station-table tbody').on('click', 'tr', function () {
+
+        const data = stationTable.row( this ).data();
+        cy.add([
+            { group: "nodes",
+                data: { id: data['stationID'], label: data['stationName'] },
+                position: { x: 100, y: 100 }}
+        ]);
+    });
+
+    document.getElementById("submitRoute").addEventListener("click", function(event) {
+
+        const route = getRouteJSON();
+        const trainID = $("#trainselect").val();
+
+        alert("Route submitted " + JSON.stringify(route));
+        $.ajax({
+            url: "{{ URI_TRAIN_ROUTER }}/" + trainID,
+            type: 'post',
+            dataType: 'json',
+            data: JSON.stringify(route),
+            contentType: "application/json; charset=utf-8",
+        });
+    });
+</script>
+{% endblock %}

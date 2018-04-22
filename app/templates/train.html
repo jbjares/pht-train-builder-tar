@@ -1,0 +1,17 @@
+{% extends "layout.html" %}
+{% block content %}
+
+        <form id = "trainform" method="post" action="{{ url_for('submit') }}" enctype="multipart/form-data">
+            <input type="file" name="{{ TRAINFILE_NAME }}">
+            <input type="submit" class="button">
+        </form>
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <ul class=flashes>
+            {% for message in messages %}
+            <li>{{ message }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% endwith %}
+{% endblock %}
