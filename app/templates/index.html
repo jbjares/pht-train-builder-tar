@@ -15,7 +15,7 @@
  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.2.11/cytoscape.js"></script>
  <script src="https://cdn.rawgit.com/cytoscape/cytoscape.js-dagre/1.5.0/cytoscape-dagre.js"></script>
 
-<link href="./styles/custom.css" rel="stylesheet" />
+<link href="{{ url_for('static',filename='css/custom.css') }}" rel="stylesheet" />
 
 </head>
 <body>
@@ -50,7 +50,7 @@
    </div>
  </div>
 
-  <script src="src/cytoscape-cxtmenu.js"></script>
-  <script src="src/cytoscape-edgehandles.js"></script>
-  <script src="bin/app.js"></script>
+  <script src="{{ url_for('static',filename='js/cytoscape-cxtmenu.js') }}"></script>
+  <script src="{{ url_for('static',filename='js/cytoscape-edgehandles.js') }}"></script>
+  <script src="{{ url_for('static',filename='js/index.js') }}"></script>
 </body>

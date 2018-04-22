@@ -1,8 +1,8 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask import request
+from flask import render_template
 from flask import jsonify
-import os
 from sqlalchemy.orm.attributes import flag_modified
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
@@ -10,6 +10,11 @@ import atexit
 import tarfile
 import docker
 import enum
+import os
+
+
+# CONSTANTS
+GET = 'GET'
 
 
 class JobState(enum.Enum):
@@ -23,7 +28,7 @@ class JobState(enum.Enum):
 
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////data/jobs.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/jobs.db'
 db = SQLAlchemy(app)
 
 UPLOAD_FOLDER = '/data/archive_files'
@@ -31,6 +36,10 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Init Docker client
 docker_client = docker.DockerClient(base_url='unix://var/run/docker.sock')
+
+
+# Get the Registry and the station-service urls from environ
+URI_STATION_SERVICE = os.environ['URI_STATION_SERVICE']
 
 
 @app.before_first_request
@@ -81,9 +90,6 @@ def update_job_state(job, state):
     db.session.flush()
     db.session.commit()
 
-def validate_train_submission_record(json):
-    return 'trainID' in json and 'registry' in json
-
 
 def response(body, status_code):
     resp = jsonify(body)
@@ -91,7 +97,12 @@ def response(body, status_code):
     return resp
 
 
-@app.route('/job', methods=['GET'])
+@app.route("/", methods=[GET])
+def index():
+    return render_template('index.html', URI_STATION_SERVICE=URI_STATION_SERVICE)
+
+
+@app.route('/job', methods=[GET])
 def get_job():
     resp = jsonify([x.serialize() for x in TrainArchiveJob.query.all()])
     resp.status_code = 200

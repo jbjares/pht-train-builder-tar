@@ -9,7 +9,7 @@ const stationTable = $("#station-table").DataTable(
     "bInfo": false,
     "bAutoWidth": false,
   "ajax": {
-      "url": "http://localhost:6006/station",
+      "url": "{{  URI_STATION_SERVICE }}",
       "dataSrc": ""
   },
   "columns": [
