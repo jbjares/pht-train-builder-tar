@@ -1,6 +1,6 @@
 
 // ---------------------------------------------------------------
-// Initialize Cytoscape Canvas
+// Initialize Cytoscape Canvas for the RoutePlanner
 // ---------------------------------------------------------------
 const cy = window.cy = cytoscape({
 
@@ -52,7 +52,7 @@ const nodeMenu = cy.cxtmenu({
        content: 'Info', // html/text content to be displayed in the menu
        contentStyle: {}, // css key:value pairs to set the command's css in js if you want
        select: function(ele) {
-          // Simply remove the node
+
           alert("Dummy Information")
        },
        enabled: true // whether the command is selectable
@@ -129,10 +129,4 @@ const eh = cy.edgehandles({
     return false;
   },
   nodeLoopOffset: -50 // offset for edgeType: 'node' loops
-});
-
-
-cy.on("add remove", function(evt) {
-
-    //$("#trainroutejson").val(JSON.stringify(getRouteJSON()));
 });

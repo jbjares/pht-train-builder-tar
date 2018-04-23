@@ -2,8 +2,6 @@
 {% block content %}
 
 
-
-
 <label for="trainselect">Plan Route for: </label>
 <select id="trainselect">
     {% for train in trains %}
@@ -34,17 +32,27 @@
 </div>
 
 <script>
+let nodeID = 1;
     function getRouteJSON() {
 
         // TODO Nodes and edges might be undefined
+        // TODO Only multiplicity 1 currently supported
         const route = cy.json()['elements'];
         return {
-            nodes: route['nodes'].map(function(node){ return node['data']['id']}),
+            nodes: route['nodes'].map(function(node) {
+
+                const data = node['data'];
+                return {
+                    id: data['id'],
+                    stationID: data['stationID'],
+                    multiplicity: 1
+
+            }}),
             edges: route['edges'].map(function(edge) {
                 const data = edge['data'];
                 return {
                     source: data['source'],
-                    target: data['target']
+                    target: data['target'],
                 };
             })
         };
@@ -68,10 +76,12 @@
     $('#station-table tbody').on('click', 'tr', function () {
 
         const data = stationTable.row( this ).data();
+
+        // TODO only multiplicity one currently supported
         cy.add([
             { group: "nodes",
-                data: { id: data['stationID'], label: data['stationName'] },
-                position: { x: 100, y: 100 }}
+              data: { id: nodeID++, stationID: data['stationID'], label: data['stationName'] },
+              position: { x: 100, y: 100 }}
         ]);
     });
 
@@ -79,15 +89,20 @@
 
         const route = getRouteJSON();
         const trainID = $("#trainselect").val();
+        alert(JSON.stringify(route));
 
-        alert("Route submitted " + JSON.stringify(route));
         $.ajax({
             url: "{{ URI_TRAIN_ROUTER }}/" + trainID,
             type: 'post',
             dataType: 'json',
+            success: function(data) {
+
+                alert("Route was successfully submitted");
+            },
             data: JSON.stringify(route),
             contentType: "application/json; charset=utf-8",
         });
     });
 </script>
+<script src="{{ url_for('static',filename='js/routeplan.js') }}"></script>
 {% endblock %}

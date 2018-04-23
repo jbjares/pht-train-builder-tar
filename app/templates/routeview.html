@@ -1,0 +1,46 @@
+{% extends "layout.html" %}
+{% block content %}
+
+
+<div class="row expanded">
+    <div class="columns large-12">
+        <label for="routeview_routeselect">Select Route to View: </label>
+        <select id="routeview_routeselect">
+            {% for route in routelist %}
+            <option value="{{ route }}">{{ route }}</option>
+            {% endfor %}}
+        </select>
+        <button id="loadroute" class="button">Load Route</button>
+    </div>
+</div>
+<div class="row expanded">
+    <div class="columns large-12">
+        <div id="cy"></div>
+    </div>
+</div>
+
+<script>
+document.getElementById("loadroute").addEventListener("click", function(evt) {
+
+    const spt = $("#routeview_routeselect").val().split(".");
+
+    $.get("{{ URI_TRAIN_ROUTER  }}/" + spt[0] + "/" + spt[1], function( data ) {
+
+        cy.elements().remove();
+        cy.add(data['nodes'].map(function(node) { return {
+
+            "group": "nodes", data: node
+        }}));
+        cy.add(data['edges'].map(function(edge) { return {
+
+            "group": "edges", data: edge
+        }}));
+        cy.layout({name: 'dagre'}).run();
+    });
+});
+</script>
+
+<script src="{{ url_for('static',filename='js/routeview.js') }}">
+</script>
+{% endblock %}
+

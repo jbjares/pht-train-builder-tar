@@ -11,16 +11,16 @@ import enum
 import os
 from werkzeug.utils import secure_filename
 import tempfile
-import sys
 import requests
-
+import sys
 
 # CONSTANTS
 GET = 'GET'
 POST = 'POST'
 TRAINFILE_NAME = 'trainfile'
 TRAINNAME_NAME = 'trainname'
-TRAINROUTEJSON_NAME = 'trainroutejson'
+KEY_TRAINID = 'trainID'
+
 
 class JobState(enum.Enum):
     """
@@ -65,7 +65,7 @@ def setup_database():
 
 
 def request_train_id():
-    return requests.post(URI_TRAIN_OFFICE).json()['trainID']
+    return requests.post(URI_TRAIN_OFFICE).json()[KEY_TRAINID]
 
 
 class TrainArchiveJob(db.Model):
@@ -100,45 +100,66 @@ def response(body, status_code):
     return resp
 
 
+#
+# Routes for viewing
+#
+
 @app.route("/", methods=[GET])
 def index():
     return render_template('index.html',
                            URI_STATION_SERVICE=URI_STATION_OFFICE,
                            TRAINFILE_NAME=TRAINFILE_NAME,
-                           TRAINROUTEJSON_NAME=TRAINROUTEJSON_NAME,
                            HEADER='Home Page')
 
 
-@app.route("/route", methods=[GET])
-def route():
+@app.route("/routeplan", methods=[GET])
+def routeplan():
 
     # Get all trains for which routes can be planned (from TrainOffice)
-    trains = [x['trainID'] for x in requests.get(URI_TRAIN_OFFICE).json()]
-    return render_template('route.html',
+    trains = []
+    try:
+        trains = [x[KEY_TRAINID] for x in requests.get(URI_TRAIN_OFFICE).json()]
+    except requests.exceptions.ConnectionError:
+        # No trainrouter is available. We cannot look at the train routes
+        pass
+    return render_template('routeplan.html',
                            URI_STATION_SERVICE=URI_STATION_OFFICE,
                            TRAINFILE_NAME=TRAINFILE_NAME,
-                           TRAINROUTEJSON_NAME=TRAINROUTEJSON_NAME,
                            HEADER='Plan Route',
                            trains=trains,
                            URI_TRAIN_ROUTER=URI_TRAIN_ROUTER)
 
 
-@app.route("/train", methods=[GET])
-def train():
+@app.route("/trainsubmit", methods=[GET])
+def trainsubmit():
 
     return render_template('train.html',
                            URI_STATION_SERVICE=URI_STATION_OFFICE,
                            TRAINFILE_NAME=TRAINFILE_NAME,
-                           TRAINROUTEJSON_NAME=TRAINROUTEJSON_NAME,
                            HEADER='Submit Train')
 
 
-@app.route('/job', methods=[GET])
-def get_job():
-    resp = jsonify([x.serialize() for x in TrainArchiveJob.query.all()])
-    resp.status_code = 200
-    return resp
+@app.route("/routeview", methods=[GET])
+def routeview():
 
+    # Get all trains with the respective routes from the TrainRouter
+    routelist = []
+    try:
+        resp = requests.get(URI_TRAIN_ROUTER).json()
+
+        # Assemble routelist
+        routelist = [train[KEY_TRAINID] + "." + str(route) for train in resp for route in train['routes']]
+    except requests.exceptions.ConnectionError:
+        # No trainrouter is available. We cannot look at the train routes
+        pass
+
+    return render_template('routeview.html',
+                           HEADER='View Route',
+                           URI_TRAIN_ROUTER=URI_TRAIN_ROUTER,
+                           routelist=routelist)
+#
+# Route for submitting trains
+#
 
 # Upload file for a particular job
 @app.route('/submit', methods=[POST])
@@ -147,14 +168,12 @@ def submit():
     # check if the post request has the file part
     if TRAINFILE_NAME not in request.files:
         flash('No file has been uploaded. Did you select the train.tar file?')
-        return redirect(url_for('train'))
 
     file = request.files[TRAINFILE_NAME]
     # if user does not select file, browser also
     # submit a empty part without filename
     if file.filename == '':
         flash('No selected file')
-        return redirect(url_for('train'))
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
         temp_dir = tempfile.mkdtemp()
@@ -165,15 +184,15 @@ def submit():
 
         # Fetch a new ID for the train
         # TODO  Use the returned ID for pushing the image
-        trainID = request_train_id()
+        train_id = request_train_id()
 
         # Create a new trainArchiveJob
         train_archive_job = TrainArchiveJob(filepath=file_path, state=JobState.JOB_SUBMITTED)
         db.session.add(train_archive_job)
         db.session.commit()
 
-        flash('New Train: {} was submitted successfully'.format(trainID))
-        return redirect(url_for('train'))
+        flash('New Train: {} was submitted successfully'.format(train_id))
+    return redirect(url_for('trainsubmit'))
 
 
 # Define the background jobs
