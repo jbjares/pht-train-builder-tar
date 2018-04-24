@@ -45,6 +45,7 @@ docker_client = docker.DockerClient(base_url='unix://var/run/docker.sock')
 URI_STATION_OFFICE = os.environ['URI_STATION_OFFICE']
 URI_TRAIN_OFFICE = os.environ['URI_TRAIN_OFFICE']
 URI_TRAIN_ROUTER = os.environ['URI_TRAIN_ROUTER']
+URI_DOCKER_REGISTRY = os.environ['URI_DOCKER_REGISTRY']
 
 
 # Setup session
@@ -76,6 +77,9 @@ class TrainArchiveJob(db.Model):
 
     # Path to the zip File
     filepath = db.Column(db.String(80), unique=True, nullable=True)
+
+    # TrainID, as obtained from the TrainOffie
+    train_id = db.Column(db.String(80), unique=True, nullable=False)
 
     # State of this archive job
     state = db.Column(db.Enum(JobState))
@@ -161,7 +165,6 @@ def routeview():
 #
 # Route for submitting trains
 #
-
 # Upload file for a particular job
 @app.route('/submit', methods=[POST])
 def submit():
@@ -184,11 +187,10 @@ def submit():
         file.save(file_path)
 
         # Fetch a new ID for the train
-        # TODO  Use the returned ID for pushing the image
         train_id = request_train_id()
 
         # Create a new trainArchiveJob
-        train_archive_job = TrainArchiveJob(filepath=file_path, state=JobState.JOB_SUBMITTED)
+        train_archive_job = TrainArchiveJob(filepath=file_path, state=JobState.JOB_SUBMITTED, train_id=train_id)
         db.session.add(train_archive_job)
         db.session.commit()
 
@@ -212,7 +214,7 @@ def create_train():
 
             # Build Docker container from tar file
         with open(job.filepath, 'r') as f:
-            repository = '{}/{}:START'.format('test1', 'test2')
+            repository = '{}/{}:START'.format(URI_DOCKER_REGISTRY, job.train_id)
             docker_client.images.build(
                 fileobj=f,
                 custom_context=True,

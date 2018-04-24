@@ -5,7 +5,7 @@ export EUREKA_INSTANCE_PORT=6007
 export URI_STATION_OFFICE=http://localhost:6006/station
 export URI_TRAIN_OFFICE=http://localhost:6001/train
 export URI_TRAIN_ROUTER=http://localhost:6004
-
+export URI_DOCKER_REGISTRY=134.2.9.126
 
 # Configuration Items are
 #SERVICE_NAME = Service name is used as the application ID towards Eureka
