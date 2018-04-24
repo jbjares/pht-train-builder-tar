@@ -4,7 +4,7 @@ export EUREKA_INSTANCE_HOSTNAME=train-builder-tar
 export EUREKA_INSTANCE_PORT=6007
 export URI_STATION_OFFICE=http://localhost:6006/station
 export URI_TRAIN_OFFICE=http://localhost:6001/train
-export URI_TRAIN_ROUTER=http://localhost:6004/train
+export URI_TRAIN_ROUTER=http://localhost:6004
 
 
 # Configuration Items are

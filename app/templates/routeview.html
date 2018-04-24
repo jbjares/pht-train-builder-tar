@@ -11,6 +11,7 @@
             {% endfor %}}
         </select>
         <button id="loadroute" class="button">Load Route</button>
+        <button id="deleteroute" class="button">Delete Route</button>
     </div>
 </div>
 <div class="row expanded">
@@ -20,13 +21,35 @@
 </div>
 
 <script>
+
+
+function recolor() {
+
+    const nodes = cy.collection("node");
+    nodes.forEach(function(ele, i, eles){
+
+        if (ele.data("hasBeenVisited")) {
+
+            // Color node green
+
+        } else if (ele.data("canBeVisited")) {
+
+           // Color node yellow
+            ele.style('background-color', '#aaaa00');
+        }
+    });
+}
+
 document.getElementById("loadroute").addEventListener("click", function(evt) {
 
     const spt = $("#routeview_routeselect").val().split(".");
 
-    $.get("{{ URI_TRAIN_ROUTER  }}/" + spt[0] + "/" + spt[1], function( data ) {
+    $.get("{{ URI_TRAIN_ROUTER  }}/train/" + spt[0] + "/" + spt[1], function( data ) {
 
+        // First clear the graph of all previous nodes
         cy.elements().remove();
+
+        // Map the retrieved data to node information
         cy.add(data['nodes'].map(function(node) { return {
 
             "group": "nodes", data: node
@@ -35,7 +58,26 @@ document.getElementById("loadroute").addEventListener("click", function(evt) {
 
             "group": "edges", data: edge
         }}));
+
         cy.layout({name: 'dagre'}).run();
+
+    // Then try to retrieve more information on the nodes for graph labeling
+    }).then(function(data) {
+
+        const params = data['nodes'].map(function(node) {return "id=" + node['id'];}).join("&");
+        return $.get("{{ URI_TRAIN_ROUTER }}/node?" + params);
+
+    }).then(function (data) {
+
+        // Update all the nodes with the retrieved information
+        for (let i = 0; i < data.length; ++i) {
+
+            const node = data[i];
+            const ele = cy.getElementById(node['id']);
+            // Update the node with the retrieved node info
+            ele.data(node);
+        }
+        recolor();
     });
 });
 </script>

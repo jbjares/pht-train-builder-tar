@@ -92,13 +92,9 @@ let nodeID = 1;
         alert(JSON.stringify(route));
 
         $.ajax({
-            url: "{{ URI_TRAIN_ROUTER }}/" + trainID,
+            url: "{{ URI_TRAIN_ROUTER }}/train/" + trainID,
             type: 'post',
             dataType: 'json',
-            success: function(data) {
-
-                alert("Route was successfully submitted");
-            },
             data: JSON.stringify(route),
             contentType: "application/json; charset=utf-8",
         });

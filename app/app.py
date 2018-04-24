@@ -20,6 +20,7 @@ POST = 'POST'
 TRAINFILE_NAME = 'trainfile'
 TRAINNAME_NAME = 'trainname'
 KEY_TRAINID = 'trainID'
+TRAIN_ROUTER_TRAIN_ROUTE = 'train'
 
 
 class JobState(enum.Enum):
@@ -145,7 +146,7 @@ def routeview():
     # Get all trains with the respective routes from the TrainRouter
     routelist = []
     try:
-        resp = requests.get(URI_TRAIN_ROUTER).json()
+        resp = requests.get(URI_TRAIN_ROUTER + "/" + TRAIN_ROUTER_TRAIN_ROUTE).json()
 
         # Assemble routelist
         routelist = [train[KEY_TRAINID] + "." + str(route) for train in resp for route in train['routes']]
