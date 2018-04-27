@@ -1,0 +1,57 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<div class="row expanded">
+    <div class="columns large-12">
+        <table id="train-table" class="display" style="width:100%">
+            <thead>
+            <tr>
+                <th>TrainID</th>
+                <th>Train Registry URI</th>
+            </tr>
+            </thead>
+        </table>
+    </div>
+</div>
+<div class="row expanded">
+    <div class="columns large-12">
+        <form id = "trainform" method="post" action="{{ url_for('submit') }}" enctype="multipart/form-data">
+            <input type="file" name="{{ TRAINFILE_NAME }}">
+            <input type="submit" class="button">
+        </form>
+        {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <ul class=flashes>
+            {% for message in messages %}
+            <li>{{ message }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+  {% endwith %}
+    </div>
+</div>
+
+
+<script>
+const trainTable = $("#train-table").DataTable({
+        "bPaginate": false,
+        "bLengthChange": false,
+        "bFilter": false,
+        "bInfo": false,
+        "bAutoWidth": false,
+        "ajax": {
+            "url": "{{  URI }}",
+            "dataSrc": ""
+        },
+        "columns": [
+            { "data": "trainID" },
+            { "data": "trainRegistryURI" }
+        ]
+});
+trainTable.on('click', 'tr', function () {
+
+        const data = trainTable.row( this ).data();
+        window.location.href = '/train/' + data['trainID'];
+});
+</script>
+{% endblock %}

@@ -32,6 +32,12 @@
 </div>
 
 <script>
+function isInt(value) {
+  return !isNaN(value) &&
+         parseInt(Number(value)) == value &&
+         !isNaN(parseInt(value, 10));
+}
+
 let nodeID = 1;
     function getRouteJSON() {
 
@@ -39,7 +45,10 @@ let nodeID = 1;
         // TODO Only multiplicity 1 currently supported
         const route = cy.json()['elements'];
         return {
-            nodes: route['nodes'].map(function(node) {
+            // Filter for only those nodes where the id is an integer
+            nodes: route['nodes'].filter(function (node) {
+                return isInt(node['data']['id']);
+            }).map(function(node) {
 
                 const data = node['data'];
                 return {
@@ -64,7 +73,7 @@ let nodeID = 1;
         "bInfo": false,
         "bAutoWidth": false,
         "ajax": {
-            "url": "{{  URI_STATION_SERVICE }}",
+            "url": "{{  URI_STATION_OFFICE }}",
             "dataSrc": ""
         },
         "columns": [
@@ -83,6 +92,7 @@ let nodeID = 1;
               data: { id: nodeID++, stationID: data['stationID'], label: data['stationName'] },
               position: { x: 100, y: 100 }}
         ]);
+        cy.layout({name: 'dagre'}).run();
     });
 
     document.getElementById("submitRoute").addEventListener("click", function(event) {
@@ -90,15 +100,17 @@ let nodeID = 1;
         const route = getRouteJSON();
         const trainID = $("#trainselect").val();
         alert(JSON.stringify(route));
-
         $.ajax({
             url: "{{ URI_TRAIN_ROUTER }}/train/" + trainID,
             type: 'post',
+            async: false,
             dataType: 'json',
             data: JSON.stringify(route),
             contentType: "application/json; charset=utf-8",
         });
+        cy.elements().remove();
     });
+
 </script>
 <script src="{{ url_for('static',filename='js/routeplan.js') }}"></script>
 {% endblock %}
