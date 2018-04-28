@@ -107,11 +107,25 @@ def response(body, status_code):
 # Routes for viewing
 #
 
+@app.route("/support", methods=[GET])
+def support():
+    return render_template('support.html')
+
+
+@app.route("/citeus", methods=[GET])
+def citeus():
+    return render_template('citeus.html')
+
+
+@app.route("/contact", methods=[GET])
+def contact():
+    return render_template('contact.html')
+
+
 
 @app.route("/", methods=[GET])
 def index():
-    return render_template('index.html',
-                           HEADER='Home Page')
+    return render_template('index.html')
 
 
 @app.route("/routeplan", methods=[GET])
