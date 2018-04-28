@@ -6,7 +6,7 @@
     <div class="columns large-12">
         <label for="routeview_routeselect">Select Route to View: </label>
         <select id="routeview_routeselect">
-            {% for route in routelist %}
+            {% for route in routes %}
             <option value="{{ route }}">{{ route }}</option>
             {% endfor %}}
         </select>
@@ -42,9 +42,10 @@ function recolor() {
 
 document.getElementById("loadroute").addEventListener("click", function(evt) {
 
-    const spt = $("#routeview_routeselect").val().split(".");
 
-    $.get("{{ URI_TRAIN_ROUTER  }}/train/" + spt[0] + "/" + spt[1], function( data ) {
+    const routeID = $("#routeview_routeselect").val();
+
+    $.get("{{ URI_TRAIN_ROUTER  }}/" + routeID, function( data ) {
 
         // First clear the graph of all previous nodes
         cy.elements().remove();

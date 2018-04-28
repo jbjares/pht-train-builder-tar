@@ -19,23 +19,46 @@
 
     <link href="{{ url_for('static',filename='css/custom.css') }}" rel="stylesheet" />
 
+    <link href="{{ url_for('static',filename='css/custom.css') }}" rel="stylesheet" />
+
+
+
+    <script src="https://use.fontawesome.com/09d156d573.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Roboto">
 </head>
 <body>
 
-<div class="top-bar">
-  <div class="top-bar-left">
-    <ul class="dropdown menu" data-dropdown-menu>
-      <li><a href="/">Home</a></li>
-       <li><a href="/train">Trains</a></li>
-      <li><a href="/routeplan">Plan Route</a></li>
-    </ul>
-  </div>
-    <div class="top-bar-right">
-        <h1>{{  HEADER }}</h1>
+<div class="container">
+    <div class="row expanded">
+        <div class="columns large-12">
+            <img src="{{ url_for('static',filename='img/logo.png') }}" height="80"/>
+        </div>
     </div>
+
+
+    <div class="row expanded">
+        <div class="columns large-12">
+            <header>
+                <div class="top-bar">
+
+                        <ul class="dropdown menu" data-dropdown-menu>
+                            <li><a href="/"><i class="fa fa-home"></i>Home</a></li>
+                            <li><a href="/design"><i class="fa fa-puzzle-piece"></i>Algorithm design</a></li>
+                            <li><a href="/train"><i class="fa fa-truck"></i>Trains</a></li>
+                            <li><a href="/routeplan">Plan Route</a></li>
+                            <li><a href="/support" ><i class="fa fa-drivers-license"></i>Support</a></li>
+                            <li><a href="/cite"><i class="fa fa-paste"></i>Cite us</a></li>
+                            <li><a href="/contact"><i class="fa fa-life-ring"></i>Contact</a></li>
+                        </ul>
+                </div>
+            </header>
+        </div>
+    </div>
+
+
+    <!-- Content rows -->
+    <div id="content">{% block content %}{% endblock %}</div>
 </div>
-
-
-<div id="content">{% block content %}{% endblock %}</div>
 
 </body>

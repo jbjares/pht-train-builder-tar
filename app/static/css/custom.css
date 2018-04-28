@@ -1,6 +1,6 @@
 body {
-  font-family: helvetica;
-  font-size: 14px;
+  font-family: 'Roboto', serif;
+  font-size: 18px;
 }
 
 #cy {
@@ -19,4 +19,9 @@ h2 {
   opacity: 0.5;
   font-size: 1.5em;
 }
-div.border { border-right: 2px solid #aaa }
+
+#content {
+
+    margin-top: 1.5em;
+}
+

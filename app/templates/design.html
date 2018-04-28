@@ -1,0 +1,328 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<form method="post">
+
+    <div class="row">
+        <div class="columns large-12">
+            <h2> Input metadata</h2>
+        </div>
+    </div>
+
+
+    <div class="row">
+        <div class="columns large-6">
+            <label for="owner">Owner : </label>
+        </div>
+        <div class="columns large-6">
+            <input name="owner" id="owner" type="text">
+            <span id="error_owner"></span>
+        </div>
+    </div>
+
+
+    <div class="row">
+        <div class="columns large-6">
+            <label for="purpose">Purpose of use : </label>
+        </div>
+        <div class="columns large-6">
+            <select name="purpose" id="purpose">
+                <option value="">Select an option</option>
+                <option value="Research">Research</option>
+                <option value="Test">Test</option>
+                <option value="Integration">Integration</option>
+                <option value="Demo">Demo</option>
+            </select>
+            <span id="error_purpose"></span>
+        </div>
+    </div>
+
+
+    <div class="row">
+        <div class="columns large-6">
+            <label for="completeness">Data completeness : </label>
+        </div>
+        <div class="columns large-6">
+            <select name="completeness" id="completeness">
+                <option value="">Select an option</option>
+                <option value="Full">Full</option>
+                <option value="Partial">Partial</option>
+            </select>
+            <span id="error_completeness"></span>
+        </div>
+    </div>
+
+
+    <div class="row">
+        <div class="columns large-12">
+            <h2>Data selection</h2>
+        </div>
+    </div>
+
+    <div class="row">
+
+        <div class="columns large-2">
+            <label>Inclusion criteria : </label>
+        </div>
+
+        <div class="columns large-2">
+            <a onclick="show_incl_inp()"><i class="fa fa-plus"></i></a>
+        </div>
+
+
+        <div class="columns large-2 incl_test" style="display:none;">
+
+            <input type="text"
+                   id="incl_name"
+                   name="incl_name"
+                   style="padding-left:5px;"
+                   onkeyup="incl_func(1)"
+                   placeholder="Search...">
+
+            <input type="hidden" id="incl_ip_type"/>
+
+            <ul id="inclname_1"
+                class="excl_values"
+                style="height:250px; width:250px; background-color:white; overflow-y:scroll;
+                overflow-x:hidden;display:none; list-style:none;margin-left:-45px;">
+
+
+                {% for name in names %}
+                <li>
+                    <a class="bold800" onclick="incl_add_for_search(1, {{ loop.index0 }})">
+                        {{ name }}
+                        <input type="hidden"
+                               name="incl_nm1_{{ loop.index0 }}"
+                               id="incl_nm1_{{ loop.index0 }}"
+                               value="{{ name }}"
+                               data-value="{{ ip_types[loop.index0] }}"/>
+                    </a>
+                    <br/>
+                    <span class="not_bold">{{ comments[loop.index0] }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+            <span id="err_incl_name"></span>
+        </div>
+
+
+        <div class="columns large-2" id="incl_operat" style="display:none;">
+
+            <select name="incl_sel_val"
+                    id="incl_sel_val">
+                <option value=">">&gt;</option>
+                <option value=">=">&gt;=</option>
+                <option value="<">&lt;</option>
+                <option value="<=">&lt;=</option>
+            </select>
+        </div>
+
+
+        <div class="columns large-2" id="incl_operat_val" style="display:none;">
+
+            <select name="incl_sel_op_val" id="incl_sel_op_val"></select>
+            <input type="number" name="incl_sel_op_val1" id="incl_sel_op_val1" style="display:none;">
+        </div>
+
+        <div class="columns large-2" id="incl_ops" style="display:none;">
+            <a onclick="incl_remove_insertable()"><i class="fa fa-times"></i></a>
+            <a id="incl_ops_check" onclick="incl_insertable()"><i class="fa fa-check"></i></a>
+        </div>
+    </div>
+
+
+
+    <div class="row">
+        <div class="columns large-4">	</div>
+        <div class="columns large-8" id="incl_insertable_val"></div>
+    </div>
+
+
+
+
+
+
+
+
+    <div class="row">
+        <div class="columns large-2">
+            <label>Exclusion criteria : </label>
+        </div>
+
+        <div class="columns large-1">
+            <a onclick="show_excl_inp()"><i class="fa fa-minus"></i></a>
+        </div>
+
+        <div class="columns large-2 excl_test" style="display:none;">
+            <input type="text"
+                   id="excl_name"
+                   name="excl_name"
+                   style="padding-left:5px;"
+                   onkeyup="excl_func(1)"
+                   placeholder="Search...">
+            <input type="hidden" id="ip_type"/>
+
+            <ul id="exclname_1"
+                class="excl_values"
+                style="height:250px; width:250px; background-color:white; overflow-y:scroll;
+                 overflow-x:hidden;display:none; list-style:none;margin-left:-45px;">
+
+                {% for name in names %}
+                <li>
+                    <a class="bold800" onclick="add_for_search(1, {{ loop.index0 }})">
+                        {{ name }}
+                        <input type="hidden"
+                               name="nm1_{{ loop.index0 }}"
+                               id="nm1_{{ loop.index0 }}"
+                               value="{{ name }}"
+                               data-value="{{ ip_types[loop.index0] }}"/>
+                    </a>
+                    <br/>
+                    <span class="not_bold">{{ comments[loop.index0] }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+            <span id="err_excl_name"></span>
+        </div>
+
+
+        <div class="columns large-2" id="operat" style="display:none;">
+            <select name="sel_val" id="sel_val">
+                <option value=">">&gt;</option>
+                <option value=">=">&gt;=</option>
+                <option value="<">&lt;</option>
+                <option value="<=">&lt;=</option>
+            </select>
+        </div>
+
+        <div class="columns large-2" id="operat_val" style="display:none;">
+            <select name="sel_op_val" id="sel_op_val"></select>
+            <input type="number" name="sel_op_val1" id="sel_op_val1" style="display:none;">
+        </div>
+
+        <div class="col-md-2" id="ops" style="display:none;">
+            <a class="mybtn" onclick="remove_insertable()"><i class="fa fa-times"></i></a>
+            <a class="mybtn" id="ops_check" onclick="insertable()"><i class="fa fa-check"></i></a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="columns large-4"></div>
+        <div class="columns large-8" id="insertable_val"></div>
+    </div>
+
+
+
+    <div class="row">
+        <div class="columns large-12">
+            <h2>Features </h2>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="columns large-12">
+            <input class="button" type="button" value="Add Features" onclick="add_feat()"/>
+        </div>
+    </div>
+
+
+
+    <div class="row" style="display:none;" id="feature_add">
+
+        <div class="columns large-6">
+            <input type="text"
+                   id="feature"
+                   name="feature"
+                   style="padding-left:5px;"
+                   onkeyup="add_feature(1)"
+                   placeholder="Search...">
+            <ul id="feature_1"
+                class="excl_values"
+                style="height:250px; width:auto; background-color:white;
+                 overflow-y:scroll; overflow-x:hidden;display:none; list-style:none;margin-left:0;">
+
+
+
+                {% for name in names %}
+                <li>
+                    <a class="bold800" onclick="add_feature_to_search('{{ name }}')">{{ name }}
+                        <input type="hidden"
+                               name="feat{{ loop.index0 }}"
+                               id="feat{{ loop.index0 }}"
+                               value="{{ name }}"
+                               data-value="{{ ip_types[loop.index0] }}"/>
+                    </a>
+                    <br/>
+                    <span class="not_bold">{{ comments[loop.index0] }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+
+            <span id="error_feat_exist"></span>
+        </div>
+
+
+        <div class="columns large-6">
+            <a class="mybtn" id="feat_ops_rem" onclick="rem_feat()"><i class="fa fa-times"></i></a>
+            <a class="mybtn" id="feat_ops_check" onclick="add_feature_func()"><i class="fa fa-check"></i></a>
+        </div>
+    </div>
+
+
+
+    <div class="row">
+        <div class="columns large-12">
+            <div id="added_feature">
+            </div>
+            <span id="error_feat_check"></span>
+            <input type="hidden" name="function_type" id="function_type">
+            <br/>
+        </div>
+    </div>
+
+
+
+    <div class="row">
+        <div class="columns large-12">
+             <h2 class="my-0">Select algorithm </h2>
+        </div>
+    </div>
+
+
+    <div class="row">
+
+        <div class="columns large-6"><label for="algorithm">Algorithm : </label></div>
+        <div class="columns large-6" style="text-align:left">
+
+            <select name="algorithm" id="algorithm">
+
+                <option value="">Select Algorithm</option>
+                <option value="Logistics regression">Logistics regression</option>
+                <option value="Random forest">Random forest</option>
+                <option value="Deep neural network">Deep neural network</option>
+                <option value="SVM">SVM</option>
+                <option value="Naive Bayes">Naive Bayes</option>
+                <option value="K-NN">K-NN</option>
+                <option value="Decision trees">Decision trees</option>
+                <option value="Gradient boosted trees">Gradient boosted trees</option>
+            </select>
+            <span id="error_algorithm"></span>
+        </div>
+    </div>
+
+
+    <div class="row">
+        <div class="columns large-6">
+            <input class="button" type="submit" value="Create Train"/>
+        </div>
+    </div>
+</form>
+
+
+
+
+<script src="{{ url_for('static',filename='js/sparql.js') }}">
+</script>
+<script src="{{ url_for('static',filename='js/design.js') }}">
+</script>
+{% endblock %}

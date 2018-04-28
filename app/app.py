@@ -12,6 +12,9 @@ import os
 from werkzeug.utils import secure_filename
 import tempfile
 from clients.TrainOfficeClient import TrainOfficeClient
+from clients.TrainRouterClient import TrainRouterClient
+from clients.SparqlClient import SparqlClient
+
 import sys
 
 
@@ -21,7 +24,6 @@ POST = 'POST'
 TRAINFILE_NAME = 'trainfile'
 TRAINNAME_NAME = 'trainname'
 KEY_TRAINID = 'trainID'
-TRAIN_ROUTER_TRAIN_ROUTE = 'train'
 
 
 class JobState(enum.Enum):
@@ -50,9 +52,8 @@ URI_STATION_OFFICE = os.environ['URI_STATION_OFFICE']
 
 
 train_office_client = TrainOfficeClient(os.environ['URI_TRAIN_OFFICE'])
+train_router_client = TrainRouterClient(os.environ['URI_TRAIN_ROUTER'])
 
-
-URI_TRAIN_ROUTER = os.environ['URI_TRAIN_ROUTER']
 URI_DOCKER_REGISTRY = os.environ['URI_DOCKER_REGISTRY']
 
 
@@ -115,15 +116,12 @@ def index():
 
 @app.route("/routeplan", methods=[GET])
 def routeplan():
-    print(URI_STATION_OFFICE + "/station", file=sys.stderr)
-    print(URI_STATION_OFFICE + "/station", file=sys.stdout)
-
     return render_template('routeplan.html',
                            URI_STATION_OFFICE=URI_STATION_OFFICE + "/station",
                            TRAINFILE_NAME=TRAINFILE_NAME,
                            HEADER='Plan Route',
                            trains=train_office_client.get_all_trains(),
-                           URI_TRAIN_ROUTER=URI_TRAIN_ROUTER)
+                           URI_TRAIN_ROUTER=train_router_client.get_uri())
 
 
 @app.route("/train", methods=[GET])
@@ -140,7 +138,22 @@ def train(train_id):
 
     return render_template('train.html',
                            HEADER='Train ' + train_id,
-                           TRAIN_ID=train_id)
+                           TRAIN_ID=train_id,
+                           URI_TRAIN_ROUTER=train_router_client.get_route_route(),
+                           routes=train_router_client.get_all_routes(train_id))
+
+
+@app.route("/design", methods=[GET])
+def design():
+    results = SparqlClient.query()["results"]["bindings"]
+    names = []
+    comments = []
+    ip_types = []
+    for result in results:
+        names.append(result['Name']['value'])
+        comments.append(result['Comment']['value'])
+        ip_types.append(result['DataType']['value'])
+    return render_template("design.html", names=names, comments=comments, ip_types=ip_types)
 
 
 # Upload file for a particular job
@@ -205,6 +218,7 @@ def create_train():
                 tag=repository)
             docker_client.images.push(repository)
         update_job_state(job, JobState.TRAIN_SUBMITTED)
+
 
 
 # Start the AP Scheduler
