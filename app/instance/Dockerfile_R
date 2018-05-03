@@ -1,0 +1,8 @@
+FROM r-base
+
+COPY metadata.rdf /pht_package/metadata.rdf
+COPY algorithm.R /pht_package/algorithm.R
+COPY query.sparql /pht_package/query.sparql
+RUN mkdir /pht_model
+
+ENTRYPOINT [ "/pht_package/algorithm.R" ]

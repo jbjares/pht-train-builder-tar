@@ -212,9 +212,9 @@ def add_dockerfile():
     job = db.session.query(TrainArchiveJob).filter_by(state=JobState.JOB_SUBMITTED).first()
     if job is not None:
         update_job_state(job, JobState.DOCKERFILE_BEING_ADDED)
-        dockerfile = os.path.abspath(os.path.join(app.instance_path, 'Dockerfile'))
-        # TODO Remove the Dockerfile if already present
-        # Add the Dockerfile to the archive
+        dockerfile = os.path.abspath(os.path.join(app.instance_path, 'Dockerfile_R'))
+        # TODO Remove the Dockerfile_R if already present
+        # Add the Dockerfile_R to the archive
         with tarfile.open(job.filepath, 'a') as tar:
             tar.add(dockerfile, arcname='Dockerfile')
         update_job_state(job, JobState.DOCKERFILE_ADDED)
