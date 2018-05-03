@@ -38,7 +38,7 @@ class JobState(enum.Enum):
 
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/jobs.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite://'
 db = SQLAlchemy(app)
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -154,6 +154,7 @@ def train(train_id):
                            HEADER='Train ' + train_id,
                            TRAIN_ID=train_id,
                            URI_TRAIN_ROUTER=train_router_client.get_route_route(),
+                           URI_TRAIN_OFFICE=train_office_client.get_route_train(),
                            routes=train_router_client.get_all_routes(train_id))
 
 

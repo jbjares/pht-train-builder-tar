@@ -12,6 +12,7 @@
         </select>
         <button id="loadroute" class="button">Load Route</button>
         <button id="deleteroute" class="button">Delete Route</button>
+        <button id="deletetrain" class="button">Delete Train</button>
     </div>
 </div>
 <div class="row expanded">
@@ -40,6 +41,7 @@ function recolor() {
     });
 }
 
+// Load the selected route into the Cytoscape view
 document.getElementById("loadroute").addEventListener("click", function(evt) {
 
 
@@ -81,6 +83,27 @@ document.getElementById("loadroute").addEventListener("click", function(evt) {
         recolor();
     });
 });
+
+
+
+
+
+// Delete the selected train and redirect
+document.getElementById("deletetrain").addEventListener("click", function(evt) {
+
+    const train_id = window.location.pathname.split('/').pop();
+
+    $.ajax({
+        url: '{{ URI_TRAIN_OFFICE }}' + "/" + train_id,
+        type: 'DELETE',
+        success: function() {
+
+            window.location.href = '/train';
+    }});
+});
+
+
+
 </script>
 
 <script src="{{ url_for('static',filename='js/train.js') }}">
