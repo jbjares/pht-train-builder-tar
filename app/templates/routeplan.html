@@ -24,7 +24,7 @@
 </div>
 <div class="row expanded">
     <div class="columns large-2">
-            <button id="submitRoute" class="button">Submit Route</button>
+        <button id="submitRoute" class="button">Submit Route</button>
     </div>
     <div class="columns large-10">
         <div id="cy"></div>
@@ -32,18 +32,26 @@
 </div>
 
 <script>
-function isInt(value) {
-  return !isNaN(value) &&
-         parseInt(Number(value)) == value &&
-         !isNaN(parseInt(value, 10));
-}
+    function isInt(value) {
+        return !isNaN(value) &&
+            parseInt(Number(value)) == value &&
+            !isNaN(parseInt(value, 10));
+    }
 
-let nodeID = 1;
+    let nodeID = 1;
     function getRouteJSON() {
 
         // TODO Nodes and edges might be undefined
         // TODO Only multiplicity 1 currently supported
         const route = cy.json()['elements'];
+
+
+        // The route might not have any edges, so add edges manually
+        if (! ("edges" in route)) {
+
+            route["edges"] = [];
+        }
+
         return {
             // Filter for only those nodes where the id is an integer
             nodes: route['nodes'].filter(function (node) {
@@ -56,7 +64,7 @@ let nodeID = 1;
                     stationID: data['stationID'],
                     multiplicity: 1
 
-            }}),
+                }}),
             edges: route['edges'].map(function(edge) {
                 const data = edge['data'];
                 return {
@@ -89,8 +97,8 @@ let nodeID = 1;
         // TODO only multiplicity one currently supported
         cy.add([
             { group: "nodes",
-              data: { id: nodeID++, stationID: data['stationID'], label: data['stationName'] },
-              position: { x: 100, y: 100 }}
+                data: { id: nodeID++, stationID: data['stationID'], label: data['stationName'] },
+                position: { x: 100, y: 100 }}
         ]);
         cy.layout({name: 'dagre'}).run();
     });

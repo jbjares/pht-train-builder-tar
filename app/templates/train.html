@@ -23,87 +23,98 @@
 
 <script>
 
+    function update_route() {
 
-function recolor() {
+        // Fetch the ids of the nodes that are currently part of the route
+        const params = cy.collection("node").map(function(node) {return "id=" + node.id();}).join("&");
 
-    const nodes = cy.collection("node");
-    nodes.forEach(function(ele, i, eles){
+        $.get("{{ URI_TRAIN_ROUTER_NODE }}?" + params, function(data) {
 
-        if (ele.data("hasBeenVisited")) {
+            // Update the node with the obtained data
+            Object.keys(data).forEach(function(key) {
 
-            // Color node green
+                // key of the returned data is the node id
+                const ele = cy.getElementById(key);
 
-        } else if (ele.data("canBeVisited")) {
+                // Update data
+                ele.data(data[key]);
 
-           // Color node yellow
-            ele.style('background-color', '#aaaa00');
-        }
+
+                // Color coding
+                if (ele.data("hasBeenVisited")) {
+
+                    // Color node green
+                    ele.style('background-color', '#007700');
+
+                } else if (ele.data("canBeVisited")) {
+
+                    // Color node yellow
+                    ele.style('background-color', '#aaaa00');
+                }
+                const model_route = "{{ url_for('download_model', node_id='NODE_ID') }}";
+                ele.data( 'model_route',  model_route.replace("NODE_ID", ele.id()));
+            });
+        });
+    }
+
+    // Load the selected route into the Cytoscape view
+    document.getElementById("loadroute").addEventListener("click", function(evt) {
+
+
+        const routeID = $("#routeview_routeselect").val();
+
+        $.get("{{ URI_TRAIN_ROUTER_ROUTE  }}/" + routeID, function( data ) {
+
+            // First clear the graph of all previous nodes
+            cy.elements().remove();
+
+            // Add nodes and edges in turn
+            cy.add(data['nodes'].map(function(node) { return {
+
+                "group": "nodes", data: node
+            }}));
+            cy.add(data['edges'].map(function(edge) { return {
+
+                "group": "edges", data: edge
+            }}));
+
+            cy.layout({name: 'dagre'}).run();
+
+        }).then(update_route);
     });
-}
-
-// Load the selected route into the Cytoscape view
-document.getElementById("loadroute").addEventListener("click", function(evt) {
 
 
-    const routeID = $("#routeview_routeselect").val();
+    // Delete the selected train and redirect
+    document.getElementById("deletetrain").addEventListener("click", function(evt) {
 
-    $.get("{{ URI_TRAIN_ROUTER  }}/" + routeID, function( data ) {
+        const train_id = window.location.pathname.split('/').pop();
 
-        // First clear the graph of all previous nodes
-        cy.elements().remove();
+        $.ajax({
+            url: '{{ URI_TRAIN_OFFICE }}' + "/" + train_id,
+            type: 'DELETE',
+            success: function() {
 
-        // Map the retrieved data to node information
-        cy.add(data['nodes'].map(function(node) { return {
-
-            "group": "nodes", data: node
-        }}));
-        cy.add(data['edges'].map(function(edge) { return {
-
-            "group": "edges", data: edge
-        }}));
-
-        cy.layout({name: 'dagre'}).run();
-
-    // Then try to retrieve more information on the nodes for graph labeling
-    }).then(function(data) {
-
-        const params = data['nodes'].map(function(node) {return "id=" + node['id'];}).join("&");
-        return $.get("{{ URI_TRAIN_ROUTER }}/node?" + params);
-
-    }).then(function (data) {
-
-        // Update all the nodes with the retrieved information
-        for (let i = 0; i < data.length; ++i) {
-
-            const node = data[i];
-            const ele = cy.getElementById(node['id']);
-            // Update the node with the retrieved node info
-            ele.data(node);
-        }
-        recolor();
+                window.location.href = '/train';
+            }});
     });
-});
 
 
+     // Delete the selected train and redirect
+    document.getElementById("deleteroute").addEventListener("click", function(evt) {
 
+        const route_id = $("#routeview_routeselect").val();
 
+        $.ajax({
+            url: '{{ URI_TRAIN_ROUTER_ROUTE }}' + "/" + route_id,
+            type: 'DELETE',
+            success: function() {
 
-// Delete the selected train and redirect
-document.getElementById("deletetrain").addEventListener("click", function(evt) {
+                window.location.href = '/train';
+            }});
+    });
 
-    const train_id = window.location.pathname.split('/').pop();
-
-    $.ajax({
-        url: '{{ URI_TRAIN_OFFICE }}' + "/" + train_id,
-        type: 'DELETE',
-        success: function() {
-
-            window.location.href = '/train';
-    }});
-});
-
-
-
+    // Update route peridically
+    setInterval(update_route, 1000);
 </script>
 
 <script src="{{ url_for('static',filename='js/train.js') }}">

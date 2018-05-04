@@ -16,7 +16,7 @@ const cy = window.cy = cytoscape({
     {
       selector: 'node',
       style: {
-        'content': 'data(label)',
+        'content': 'data(stationName)',
         'text-opacity': 0.5,
         'text-valign': 'center',
         'text-halign': 'right',
@@ -33,4 +33,11 @@ const cy = window.cy = cytoscape({
       }
     }
   ]
+});
+
+
+// Click handler for fetching the models from the registry
+cy.on('click', 'node', function(evt){
+
+     document.location.href = this.data("model_route");
 });

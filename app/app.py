@@ -1,6 +1,6 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from flask import request, render_template, jsonify, flash, redirect, url_for
+from flask import request, render_template, jsonify, flash, redirect, url_for, send_file
 from sqlalchemy.orm.attributes import flag_modified
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
@@ -10,20 +10,26 @@ import docker
 import enum
 import os
 from werkzeug.utils import secure_filename
-import tempfile
 from clients.TrainOfficeClient import TrainOfficeClient
 from clients.TrainRouterClient import TrainRouterClient
 from clients.SparqlClient import SparqlClient
+import tempfile
+import zipfile
 
 import sys
 
 
+KEEP_OPEN_CMD = "tail -f /dev/null"
 # CONSTANTSfL
 GET = 'GET'
 POST = 'POST'
 TRAINFILE_NAME = 'trainfile'
 TRAINNAME_NAME = 'trainname'
 KEY_TRAINID = 'trainID'
+
+
+EXPORT_MOUNT = '/tmp/export'
+COPY_COMMAND = 'cp -a /pht_model {}'.format(EXPORT_MOUNT)
 
 
 class JobState(enum.Enum):
@@ -45,6 +51,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Init Docker client
 docker_client = docker.DockerClient(base_url='unix://run/docker.sock')
+cli = docker.APIClient(base_url='unix://run/docker.sock')
 
 
 # Get the Registry and the station-service urls from environ
@@ -53,12 +60,26 @@ URI_STATION_OFFICE = os.environ['URI_STATION_OFFICE']
 
 train_office_client = TrainOfficeClient(os.environ['URI_TRAIN_OFFICE'])
 train_router_client = TrainRouterClient(os.environ['URI_TRAIN_ROUTER'])
+DIR_MODELS = os.environ['DIR_MODELS']
+
 
 URI_DOCKER_REGISTRY = os.environ['URI_DOCKER_REGISTRY']
 
 
 # Setup session
 app.secret_key = '37rwfyw89rfvbuyeiwjfwruf84ewuesbvguei'
+
+
+def pprint(msg):
+    print(msg, file=sys.stderr)
+    sys.stderr.flush()
+
+
+def zipdir(path, ziph):
+    # ziph is zipfile handle
+    for root, dirs, files in os.walk(path):
+        for file in files:
+            ziph.write(os.path.join(root, file))
 
 
 def allowed_file(filename):
@@ -77,11 +98,33 @@ class TrainArchiveJob(db.Model):
     # TrainID, as obtained from the TrainOffie
     train_id = db.Column(db.String(80), unique=False, nullable=False)
 
+    # The type of the train, just selected by file extensionof the algorithm file
+    # Currently, the types are either R or PY
+    dockerfile = db.Column(db.String(80), unique=False, nullable=False)
+
     # State of this archive job
     state = db.Column(db.Enum(JobState))
 
 
 db.create_all()
+
+
+def get_dockerfile(filepath):
+
+    extension_to_dockerfile = {
+
+        'PY': 'Dockerfile_PY',
+        'py': 'Dockerfile_PY',
+        'R': 'Dockerfile_R',
+        'r': 'Dockerfile_R',
+    }
+
+    tar = tarfile.open(filepath)
+    for tarinfo in tar.getmembers():
+        name = os.path.basename(tarinfo.name)
+        if name.startswith('algorithm'):
+            ext = str(name.split('.')[-1])
+            return extension_to_dockerfile[ext]
 
 
 def update_job_state(job, state):
@@ -153,9 +196,53 @@ def train(train_id):
     return render_template('train.html',
                            HEADER='Train ' + train_id,
                            TRAIN_ID=train_id,
-                           URI_TRAIN_ROUTER=train_router_client.get_route_route(),
+                           URI_TRAIN_ROUTER_ROUTE=train_router_client.get_route_route(),
+                           URI_TRAIN_ROUTER_NODE=train_router_client.get_route_node(),
                            URI_TRAIN_OFFICE=train_office_client.get_route_train(),
                            routes=train_router_client.get_all_routes(train_id))
+
+
+
+@app.route("/model/<node_id>", methods=[GET])
+def download_model(node_id):
+
+    nodeinfo = train_router_client.get_node_info(node_id).json()[node_id]
+    if bool(nodeinfo['hasBeenVisited']):
+        train_registry_uri = nodeinfo['trainRegistryURI']
+        train_id = nodeinfo['trainID']
+        repository = train_registry_uri + "/" + str(train_id)
+        tag = str(nodeinfo['trainDestinationID'])
+        docker_client.images.pull(repository, tag)
+
+        host_mount = os.path.join(DIR_MODELS, node_id)
+
+        # The zip file where the model will be stored
+        zip_file = os.path.abspath(tempfile.mkstemp('.zip')[1])
+
+        # Bind the model directory to the host directory
+        container_id = cli.create_container(
+            repository + ":" + tag,
+            COPY_COMMAND,
+            entrypoint=COPY_COMMAND,
+            volumes=[EXPORT_MOUNT],
+            host_config=cli.create_host_config(binds={
+                host_mount: {
+                    'bind': EXPORT_MOUNT,
+                    'mode': 'rw',
+                }}))['Id']
+        cli.start(container_id)
+
+        # TODO TIMEOUT and check exit code
+        exit_code = cli.wait(container_id)
+
+        # Create zip archive of exported model
+        with zipfile.ZipFile(zip_file, 'w', zipfile.ZIP_DEFLATED) as zip_handle:
+            zipdir(host_mount, zip_handle)
+        return send_file(zip_file)
+
+    return render_template('index.html')
+
+
 
 
 @app.route("/design", methods=[GET])
@@ -192,14 +279,22 @@ def submit():
         file_path = os.path.abspath(os.path.join(temp_dir, filename))
         file.save(file_path)
 
+        # Determine the type of the train
+        # TODO Fail if the type could not be determined
+        dockerfile = get_dockerfile(file_path)
+
         # Fetch a new ID for the train
         train_id = train_office_client.create_train()
 
         # Create a new trainArchiveJob
-        train_archive_job = TrainArchiveJob(filepath=file_path, state=JobState.JOB_SUBMITTED, train_id=train_id)
+        train_archive_job = TrainArchiveJob(
+            filepath=file_path,
+            state=JobState.JOB_SUBMITTED,
+            train_id=train_id,
+            dockerfile=dockerfile)
+
         db.session.add(train_archive_job)
         db.session.commit()
-
         flash('New Train: {} was submitted successfully'.format(train_id))
     return redirect(url_for('train_index'))
 
@@ -212,8 +307,9 @@ def add_dockerfile():
     job = db.session.query(TrainArchiveJob).filter_by(state=JobState.JOB_SUBMITTED).first()
     if job is not None:
         update_job_state(job, JobState.DOCKERFILE_BEING_ADDED)
-        dockerfile = os.path.abspath(os.path.join(app.instance_path, 'Dockerfile_R'))
-        # TODO Remove the Dockerfile_R if already present
+        dockerfile = os.path.abspath(os.path.join(app.instance_path, job.dockerfile))
+
+        # TODO Remove the Dockerfile if already present
         # Add the Dockerfile_R to the archive
         with tarfile.open(job.filepath, 'a') as tar:
             tar.add(dockerfile, arcname='Dockerfile')
@@ -233,7 +329,6 @@ def create_train():
                 tag=repository)
             docker_client.images.push(repository)
         update_job_state(job, JobState.TRAIN_SUBMITTED)
-
 
 
 # Start the AP Scheduler

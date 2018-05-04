@@ -1,0 +1,25 @@
+version: "3.6"
+
+services:
+
+  trainbuilder:
+    image: pht/train-builder-tar
+    hostname: train-builder-tar
+    expose:
+      - "6007"
+    ports:
+      - "6007:6007"
+    volumes:
+      - type: bind
+        source: /run/docker.sock
+        target: /run/docker.sock
+      - type: bind           # Since the docker.socket is mounted, source and target need to be identical
+        source: /mnt/models
+        target: /mnt/models
+    environment:
+       - URI_STATION_OFFICE=http://193.196.20.68:6006
+       - URI_TRAIN_OFFICE=http://193.196.20.68:6001
+       - URI_TRAIN_ROUTER=http://193.196.20.68:6004
+       - URI_DOCKER_REGISTRY=193.196.20.86
+       - DIR_MODELS=/mnt/models
+

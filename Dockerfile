@@ -7,7 +7,6 @@ ARG VCS_REF
 LABEL org.label-schema.build-date=$BUILD_DATE \
       org.label-schema.vcs-ref=$VCS_REF
 
-
 RUN mkdir -p /usr/src
 COPY app /usr/src/app
 WORKDIR /usr/src/app

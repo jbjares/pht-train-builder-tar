@@ -1,0 +1,9 @@
+FROM petronetto/docker-python-deep-learning
+
+COPY metadata.rdf /pht_package/metadata.rdf
+COPY algorithm.py /pht_package/algorithm.py
+COPY query.sparql /pht_package/query.sparql
+
+RUN mkdir /pht_model
+
+ENTRYPOINT [ "/pht_package/algorithm.py" ]
