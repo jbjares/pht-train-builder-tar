@@ -17,9 +17,9 @@ services:
         source: /mnt/models
         target: /mnt/models
     environment:
-       - URI_STATION_OFFICE=http://193.196.20.68:6006
-       - URI_TRAIN_OFFICE=http://193.196.20.68:6001
-       - URI_TRAIN_ROUTER=http://193.196.20.68:6004
+       - URI_STATION_OFFICE=http://193.196.20.86:8763
+       - URI_TRAIN_OFFICE=http://193.196.20.86:8762
+       - URI_TRAIN_ROUTER=http://193.196.20.86:8764
        - URI_DOCKER_REGISTRY=193.196.20.86
        - DIR_MODELS=/mnt/models
 
