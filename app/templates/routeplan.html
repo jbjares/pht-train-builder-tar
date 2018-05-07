@@ -2,12 +2,17 @@
 {% block content %}
 
 
-<label for="trainselect">Plan Route for: </label>
-<select id="trainselect">
-    {% for train in trains %}
-    <option value="{{ train }}">{{ train }}</option>
-    {% endfor %}}
-</select>
+
+<div class="row expanded">
+    <div class="columns large-12">
+      <label for="trainselect">Plan Route for Train: </label>
+      <select id="trainselect">
+          {% for train in trains %}
+          <option value="{{ train }}">{{ train }}</option>
+          {% endfor %}}
+      </select>
+    </div>
+</div>
 
 <div class="row expanded">
     <div class="columns large-12">
