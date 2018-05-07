@@ -4,7 +4,7 @@ IMAGE_NAME = pht/train-builder-tar
 CONTAINER_NAME = train-builder-tar
 
 build:
-	docker build --no-cache -t $(IMAGE_NAME) .
+	docker build --rm --no-cache -t $(IMAGE_NAME) .
 
 release:
 	docker build \
