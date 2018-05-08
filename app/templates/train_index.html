@@ -3,6 +3,12 @@
 
 <div class="row expanded">
     <div class="columns large-12">
+        <h2>Existing Trains</h2>
+    </div>
+</div>
+
+<div class="row expanded">
+    <div class="columns large-12">
         <table id="train-table" class="display" style="width:100%">
             <thead>
             <tr>
@@ -13,11 +19,19 @@
         </table>
     </div>
 </div>
+
+<div class="row expanded">
+    <div class="columns large-12">
+        <h2>Submit a new Train</h2>
+    </div>
+</div>
+
+
 <div class="row expanded">
     <div class="columns large-12">
         <form id = "trainform" method="post" action="{{ url_for('submit') }}" enctype="multipart/form-data">
             <input type="file" name="{{ TRAINFILE_NAME }}">
-            <input type="submit" class="button">
+            <input type="submit" class="button" value="Submit">
         </form>
         {% with messages = get_flashed_messages() %}
         {% if messages %}
